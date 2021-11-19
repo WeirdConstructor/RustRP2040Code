@@ -39,6 +39,10 @@ Use with care, and "it's probably safer to reserve heap space with linker script
 
 ![Raspberry Pi Pico Pinout](res/raspberry_pi_pico_pinout_overview.png)
 
+## Connecting the Raspberry Pi Pico Probe
+
+![Raspberry Pi Pico Connection](res/raspberry_pi_pico_probe_wiring.png)
+
 ## Assorted Projects / Crates
 
 - [ithinuel ws2812-pio-rs - ws2812 driver that uses the PIO peripheral](https://github.com/ithinuel/ws2812-pio-rs/)
