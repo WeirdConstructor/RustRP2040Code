@@ -35,6 +35,10 @@ A broad overview of the rp2040 Rust ecosystem:
 - [Cortex-M allocator](https://crates.io/crates/alloc-cortex-m)
 Use with care, and "it's probably safer to reserve heap space with linker scripts!"
 
+## Raspberry Pi Pico Pinout
+
+![Raspberry Pi Pico Pinout](res/raspberry_pi_pico_pinout_overview.png)
+
 ## Assorted Projects / Crates
 
 - [ithinuel ws2812-pio-rs - ws2812 driver that uses the PIO peripheral](https://github.com/ithinuel/ws2812-pio-rs/)
