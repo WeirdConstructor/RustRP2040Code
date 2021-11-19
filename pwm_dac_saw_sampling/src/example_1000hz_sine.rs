@@ -63,10 +63,6 @@ fn main() -> ! {
     let channel = &mut pwm.channel_b;
     channel.output_to(pins.gpio15);
 
-    let saw_mode = false;
-
-    use num_traits::float::FloatCore;
-
     let sin =
         unsafe {
             core::mem::transmute::<_, fn(f32) -> f32>
@@ -77,14 +73,9 @@ fn main() -> ! {
     loop {
         cnt_down.start((25_u32).microseconds());
 
-        let y =
-            if saw_mode {
-                phase
-            } else {
-                (sin(phase * 3.141 * 2.0) + 1.0) * 0.5
-            };
+        let y = (sin(phase * 3.141 * 2.0) + 1.0) * 0.5;
 
-        channel.set_duty((y * (top + 1) as f32).floor() as u16);
+        channel.set_duty((y * (top + 1) as f32) as u16);
 
         phase = phase + (440.0 / 40000.0);
         while phase > 1.0 { phase -= 1.0; }

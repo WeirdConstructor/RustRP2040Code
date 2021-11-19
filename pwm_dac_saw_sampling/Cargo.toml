@@ -83,3 +83,7 @@ debug-assertions = false
 incremental = false
 lto = 'fat'
 opt-level = 3
+
+[dependencies.num-traits]
+version = "0.2.14"
+default-features = false
