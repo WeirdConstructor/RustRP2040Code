@@ -30,10 +30,12 @@ A broad overview of the rp2040 Rust ecosystem:
     - [rp2040-hal examples](https://github.com/rp-rs/rp-hal/tree/main/rp2040-hal/examples)
 - elf2uf2 converter: `cargo install elf2uf2-rs --locked`
 - [Raspberry Pi Pico DapperMime CMSIS-DAP Debug Probe UF2 Image](https://github.com/majbthrd/DapperMime/releases/download/20210225/raspberry_pi_pico-DapperMime.uf2)
-  - See also: https://github.com/rp-rs/rp2040-project-template/blob/main/debug_probes.md
+  - See also: [https://github.com/rp-rs/rp2040-project-template/blob/main/debug_probes.md](https://github.com/rp-rs/rp2040-project-template/blob/main/debug_probes.md)
 - [heapless - statically allocated data structures](https://docs.rs/heapless/0.7.8/heapless/)
 - [Cortex-M allocator](https://crates.io/crates/alloc-cortex-m)
 Use with care, and "it's probably safer to reserve heap space with linker scripts!"
+
+**See also a another big link list about Embedded Rust here:** https://github.com/rust-embedded/awesome-embedded-rust
 
 ## Reading material
 
