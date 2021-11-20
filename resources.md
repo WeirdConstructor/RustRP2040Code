@@ -35,6 +35,67 @@ A broad overview of the rp2040 Rust ecosystem:
 - [Cortex-M allocator](https://crates.io/crates/alloc-cortex-m)
 Use with care, and "it's probably safer to reserve heap space with linker scripts!"
 
+## Reading material
+
+- [The Embedded Rust Book](https://doc.rust-lang.org/beta/embedded-book/intro/index.html)
+
+## Determining rp2040 Rust Program Size on Flash and RAM
+
+The easiest overview you can achieve with the `size` tool that comes
+with Linux:
+
+```
+./target/thumbv6m-none-eabi/release$ size rp2040-pwm-dac-sine-saw-synth
+   text	   data	    bss	    dec	    hex	filename
+  12176	     48	   1032	  13256	   33c8	rp2040-pwm-dac-sine-saw-synth
+```
+
+- `text` is the program code, which resides in flash.
+- `data` is the static data of your program, which will end up in flash _and_ RAM.
+- `bss` is uninitialized data, which will consume RAM.
+
+You can also install binutils for cargo:
+
+```
+    cargo install cargo-binutils
+
+    # also this, or otherwise you will get a "No such file or directory"
+    # error when using `cargo nm`:
+    rustup component add llvm-tools-preview
+```
+
+And then run `cargo nm`:
+
+```
+./rp2040_code/pwm_dac_saw_sampling$ cargo nm --release | sort
+00000000 N {"package":"defmt","tag":"defmt_prim","data":"{=__internal_Display}","disambiguator":"14725451269531928465"}
+...
+10000000 r rp2040_pwm_dac_sine_saw_synth::BOOT2::h4551b8283fee8692
+10002fe0 D __veneer_limit
+2003fbc8 A _stack_start
+...
+20040000 B __sheap
+```
+
+The addresses starting with a `100*` are in flash, and the addresses
+starting with `200*` are in RAM.
+
+If you want to know the size of the individual elements, you can use
+this command (which I found via `cargo nm -h`):
+
+```
+./p2040_code/pwm_dac_saw_sampling$ cargo nm --release -- --print-size --size-sort
+100013f6 00000000 T ADC_IRQ_FIFO
+...
+100001f0 0000000a T main
+...
+100001fc 00000848 t rp2040_pwm_dac_sine_saw_synth::__cortex_m_rt_main::hff61f1c9c409d1f1
+```
+
+The second column is the size of the given symbols. As you can see, the
+main function which contains the most code is also the biggest.
+The numbers are in hexadecimal, so `0x848` are actually `2120 bytes`.
+
 ## Raspberry Pi Pico Pinout
 
 ![Raspberry Pi Pico Pinout](res/raspberry_pi_pico_pinout_overview.png)

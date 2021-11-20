@@ -72,10 +72,6 @@ fn main() -> ! {
     // >> fc 40.0 0.000000100
     // > 39788.735772971224
 
-    use alloc;
-    let x : Vec<f32> = alloc::vec::Vec::new();
-    x.push(0.2);
-
     let sin =
         unsafe {
             core::mem::transmute::<_, fn(f32) -> f32>
