@@ -96,6 +96,8 @@ The second column is the size of the given symbols. As you can see, the
 main function which contains the most code is also the biggest.
 The numbers are in hexadecimal, so `0x848` are actually `2120 bytes`.
 
+See also: https://github.com/rust-embedded/cargo-binutils
+
 ## Raspberry Pi Pico Pinout
 
 ![Raspberry Pi Pico Pinout](res/raspberry_pi_pico_pinout_overview.png)
