@@ -27,6 +27,8 @@ use ws2812_pio::Ws2812;
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
+const LEN : usize = 302;
+
 struct MovingAvg {
     buf:    [u16; 30],
     ptr:    u16,
@@ -49,6 +51,42 @@ impl MovingAvg {
         }
         (sum / self.buf.len()) as u16
     }
+}
+
+pub fn hsv2rgb(hue: f32, sat: f32, val: f32) -> (f32, f32, f32) {
+    let c = val * sat;
+    let v = (hue / 60.0) % 2.0 - 1.0;
+    let v = if v < 0.0 { -v } else { v };
+    let x = c * (1.0 - v);
+    let m = val - c;
+    let (r_, g_, b_) =
+        if        hue >= 0.0   && hue < 60.0 {
+            (c, x, 0.0)
+        } else if hue >= 60.0  && hue < 120.0 {
+            (x, c, 0.0)
+        } else if hue >= 120.0 && hue < 180.0 {
+            (0.0, c, x)
+        } else if hue >= 180.0 && hue < 240.0 {
+            (0.0, x, c)
+        } else if hue >= 240.0 && hue < 300.0 {
+            (x, 0.0, c)
+        } else { // if hue >= 300.0 && hue < 360.0 {
+            (c, 0.0, x)
+        };
+//    println!("in: h={}, s={}, v={}, r:{}, g:{}, b: {}", hue, sat, val,
+//        (r_ + m) * 255.0,
+//        (g_ + m) * 255.0,
+//        (b_ + m) * 255.0);
+    (r_ + m, g_ + m, b_ + m)
+}
+
+pub fn hsv2rgb_u8(h: f32, s: f32, v: f32) -> (u8, u8, u8) {
+    let r = hsv2rgb(h, s, v);
+    (
+        (r.0 * 255.0) as u8,
+        (r.1 * 255.0) as u8,
+        (r.2 * 255.0) as u8
+    )
 }
 
 #[entry]
@@ -97,45 +135,49 @@ fn main() -> ! {
 
 
     let mut n: u8 = 0;
-    let mut leds : [RGB8; 7] = [
-        (0, 0, 0).into(),
-        (0, 0, 0).into(),
-        (255, 0, 255).into(),
-        (0, 255, 255).into(),
-        (255, 255, 0).into(),
-        (  0, 255, 0).into(),
-        (255, 0, 0).into(),
+    let mut leds_off : [RGB8; LEN] = [(0,0,0).into(); LEN];
+    let mut leds : [RGB8; LEN] = [(0,0,0).into(); LEN];
+
+    for i in 0..LEN {
+        leds[i] = (255, 128, 64).into();
+    }
+//    leds[149] = (255, 255, 255).into();
+//    leds[70] = (255, 0, 255).into();
+//    leds[100] = (255, 0, 0).into();
+
+    let colors : [RGB8; 3] = [
+        hsv2rgb_u8(0.0, 1.0, 1.0).into(),
+        (0, 255, 0).into(),
+        (0, 0, 255).into(),
     ];
 
-    let mut avg = MovingAvg::new();
+    let amperes = 8.0;
+    let all_on_amp = (LEN as f32 * 3.0 * 60.0) / 1000.0;
 
-    let mut timer_cnt : usize = 0;
-    let mut state_on = false;
+    let vbrightness = ((amperes / all_on_amp) * 255.0) as u8;
+    info!("brightness={} / 255", vbrightness);
+    ws.write(brightness(leds_off.iter().copied(), vbrightness)).unwrap();
 
-    let mut r : u16 = avg.next(adc.read(&mut adc_pin_0).unwrap());
+//    for i in 0..LEN {
+//        leds[i] = colors[1];
+//    }
+//    info!("LEDS={}", leds.len());
+
+    let mut cnt = 0;
+
+    let mut j = 0;
+
     loop {
-        timer_cnt = timer_cnt.wrapping_add(1);
-        n = n.wrapping_add(1);
-
-        if n == 255 {
-            rot(&mut leds[2..]);
+        cnt += 1;
+        if cnt > 400 {
+            cnt = 0;
         }
 
-        if n % 8 == 0 {
-            r = avg.next(adc.read(&mut adc_pin_0).unwrap());
-            info!("adc={}", r);
+        let clr = hsv2rgb_u8((cnt as f32 / 400.0) * 360.0, 0.0, 1.0);
+//        info!("[{}] clr : {}", cnt, clr);
+        for i in 0..LEN {
+            leds[i] = clr.into();
         }
-
-        if state_on && timer_cnt > (10000 / 16) {
-            state_on = false;
-
-        } else if r <= 1000 {
-            state_on = true;
-            timer_cnt = 0;
-        }
-
-        let b = if n > 128 { 128 - (n - 128) } else { n };
-        let vbrightness = if !state_on { 0 } else { 64 + (b / 3) };
 
         ws.write(brightness(leds.iter().copied(), vbrightness)).unwrap();
         delay.start(16.milliseconds());
