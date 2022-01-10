@@ -180,7 +180,7 @@ mod app {
     };
 
     use smart_leds::{brightness, SmartLedsWrite, RGB8};
-    use ws2812_pio::Ws2812Driver;
+    use ws2812_pio::Ws2812Direct;
     use pico::hal::pio::PIOExt;
 
     const SCAN_TIME_US: u32 = 1000000;
@@ -190,7 +190,7 @@ mod app {
         timer: Timer,
         alarm: hal::timer::Alarm0,
         led: hal::gpio::Pin<hal::gpio::pin::bank0::Gpio25, hal::gpio::PushPullOutput>,
-        ws: Ws2812Driver<pico::hal::pac::PIO0, SM0, hal::gpio::pin::bank0::Gpio4>,
+        ws: Ws2812Direct<pico::hal::pac::PIO0, SM0, hal::gpio::pin::bank0::Gpio4>,
     }
 
     #[local]
@@ -228,7 +228,7 @@ mod app {
         alarm.enable_interrupt(&mut timer);
 
         let (mut pio, sm0, _, _, _) = c.device.PIO0.split(&mut resets);
-        let ws = Ws2812Driver::new(
+        let ws = Ws2812Direct::new(
             pins.gpio4.into_mode(),
             &mut pio,
             sm0,
