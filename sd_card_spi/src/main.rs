@@ -11,11 +11,12 @@ use embedded_hal::digital::v2::OutputPin;
 use panic_probe as _;
 
 use embedded_sdmmc;
+use embedded_sdmmc::filesystem::Mode;
 
-use rp2040_hal as rphal;
-
-use pico::hal::{
+use rp_pico::hal::{
     pac,
+    gpio,
+    spi,
     clocks::{Clock, init_clocks_and_plls},
     sio::Sio,
     watchdog::Watchdog,
@@ -26,14 +27,8 @@ use pico::hal::{
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
+#[derive(Default)]
 pub struct DummyTimesource {
-}
-
-impl DummyTimesource {
-    pub fn new() -> Self {
-        Self {
-        }
-    }
 }
 
 impl embedded_sdmmc::TimeSource for DummyTimesource {
@@ -71,7 +66,7 @@ fn main() -> ! {
         .ok()
         .unwrap();
 
-    let pins = pico::Pins::new(
+    let pins = rp_pico::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -83,11 +78,11 @@ fn main() -> ! {
 
 //    let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
 
-    let _spi_sclk = pins.gpio2.into_mode::<rphal::gpio::FunctionSpi>();
-    let _spi_mosi = pins.gpio3.into_mode::<rphal::gpio::FunctionSpi>();
-    let _spi_miso = pins.gpio4.into_mode::<rphal::gpio::FunctionSpi>();
+    let _spi_sclk = pins.gpio2.into_mode::<gpio::FunctionSpi>();
+    let _spi_mosi = pins.gpio3.into_mode::<gpio::FunctionSpi>();
+    let _spi_miso = pins.gpio4.into_mode::<gpio::FunctionSpi>();
     let spi_cs = pins.gpio5.into_push_pull_output();
-    let spi = rphal::spi::Spi::<_, _, 8>::new(pac.SPI0);
+    let spi = spi::Spi::<_, _, 8>::new(pac.SPI0);
 
     // Exchange the uninitialised SPI driver for an initialised one
     let spi = spi.init(
@@ -102,7 +97,7 @@ fn main() -> ! {
     info!("Aquire BlockDevice ok!");
 
     let mut cont =
-        embedded_sdmmc::Controller::new(block, DummyTimesource::new());
+        embedded_sdmmc::Controller::new(block, DummyTimesource::default());
     info!("Init SD card...");
 
     info!("OK!\nCard size...");
@@ -118,6 +113,7 @@ fn main() -> ! {
             match cont.open_root_dir(&v) {
                 Ok(dir) => {
                     info!("Root!");
+
                     cont.iterate_dir(&v, &dir, |ent| {
                         info!("/{}.{}",
                             core::str::from_utf8(ent.name.base_name()).unwrap(),
@@ -127,17 +123,18 @@ fn main() -> ! {
                     let mut file =
                         cont.open_file_in_dir(
                             &mut v, &dir, "O.TST",
-                            embedded_sdmmc::filesystem::Mode::ReadOnly).unwrap();
+                            Mode::ReadOnly).unwrap();
+
                     let mut buf = [0u8; 32];
                     let nr = cont.read(&mut v, &mut file, &mut buf).unwrap();
-                    info!("READ {} bytes: {}", nr, buf);
                     cont.close_file(&v, file).unwrap();
+
+                    info!("READ {} bytes: {}", nr, buf);
 
                     let mut file =
                         cont.open_file_in_dir(
                             &mut v, &dir, "O.TST",
-//                            embedded_sdmmc::filesystem::Mode::ReadWriteCreateOrAppend).unwrap();
-                            embedded_sdmmc::filesystem::Mode::ReadWriteCreateOrTruncate).unwrap();
+                            Mode::ReadWriteCreateOrTruncate).unwrap();
                     cont.write(&mut v, &mut file, b"foobar123\n").unwrap();
                     cont.close_file(&v, file).unwrap();
                 },

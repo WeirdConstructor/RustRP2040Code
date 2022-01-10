@@ -2,7 +2,7 @@
 authors = ["Weird Constructor"]
 edition = "2018"
 readme = "README.md"
-name = "rp2040-sd-card-spi"
+name = "rp2040-rtic-ws2812-led"
 version = "0.1.0"
 resolver = "2"
 
@@ -11,16 +11,18 @@ cortex-m = "0.7.3"
 cortex-m-rt = "0.7.0"
 embedded-hal = { version = "0.2.5", features=["unproven"] }
 embedded-time = "0.12.0"
-
-embedded-sdmmc = { git = "https://github.com/rust-embedded-community/embedded-sdmmc-rs.git" }
+cortex-m-rtic = "0.6.0-rc.4"
 
 defmt = "0.2.0"
 defmt-rtt = "0.2.0"
 panic-probe = { version = "0.2.0", features = ["print-defmt"] }
 
-rp2040-hal = { git = "https://github.com/rp-rs/rp-hal", branch="main", features=["rt"] }
+#rp2040-hal = { git = "https://github.com/rp-rs/rp-hal", branch="main", features=["rt"] }
 rp2040-boot2 = { git = "https://github.com/rp-rs/rp2040-boot2-rs", branch="main" }
-rp-pico = { git = "https://github.com/rp-rs/rp-hal.git", branch="main" }
+pico = { git = "https://github.com/rp-rs/rp-hal.git", branch="main" }
+
+smart-leds = "0.3.0"
+ws2812-pio = { path = "../../ws2812-pio-rs/" }
 
 nb = "1.0"
 
