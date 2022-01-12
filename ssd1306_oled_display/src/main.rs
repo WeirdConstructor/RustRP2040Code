@@ -9,13 +9,10 @@ use embedded_time::rate::Extensions;
 use embedded_hal::timer::CountDown;
 use panic_probe as _;
 
-use embedded_hal::adc::OneShot;
-use embedded_hal::blocking::i2c::Write;
 use pico::hal::{
     pac,
-    clocks::{Clock, init_clocks_and_plls},
+    clocks::init_clocks_and_plls,
     sio::Sio,
-    adc::Adc,
     gpio,
     i2c::I2C,
     watchdog::Watchdog,
@@ -28,8 +25,6 @@ use embedded_graphics::{
     text::{Baseline, Text},
 };
 use ssd1306::{prelude::*, I2CDisplayInterface, Ssd1306};
-
-use pico::hal::pio::PIOExt;
 
 #[link_section = ".boot2"]
 #[used]
@@ -98,7 +93,7 @@ fn main() -> ! {
     // Create the I²C drive, using the two pre-configured pins. This will fail
     // at compile time if the pins are in the wrong mode, or if this I²C
     // peripheral isn't available on these pins!
-    let mut i2c = I2C::i2c0(
+    let i2c = I2C::i2c0(
         pac.I2C0,
         sda_pin,
         scl_pin,
@@ -125,7 +120,7 @@ fn main() -> ! {
 
     loop {
         let mut buf = FmtBuf::new();
-        core::fmt::write(&mut buf, format_args!("counter: {}", count));
+        core::fmt::write(&mut buf, format_args!("counter: {}", count)).unwrap();
 
         count += 1;
 
