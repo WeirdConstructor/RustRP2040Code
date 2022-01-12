@@ -41,9 +41,7 @@ impl FmtBuf {
     }
 
     fn as_str(&self) -> &str {
-        unsafe {
-            core::str::from_utf8_unchecked(&self.buf[0..self.ptr])
-        }
+        core::str::from_utf8(&self.buf[0..self.ptr]).unwrap()
     }
 }
 
@@ -103,8 +101,7 @@ fn main() -> ! {
     );
 
     let interface = I2CDisplayInterface::new(i2c);
-    let mut display =
-        Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
+    let mut display = Ssd1306::new(interface, DisplaySize128x64, DisplayRotation::Rotate0)
         .into_buffered_graphics_mode();
     display.init().unwrap();
 
@@ -118,28 +115,87 @@ fn main() -> ! {
 
     let mut count = 0;
 
+    let mut image = [0.0f32; 128 * 64];
+    draw_grayscale_image(&mut image);
+
+    let mut time = 0;
+    let mut mode = 0;
     loop {
-        let mut buf = FmtBuf::new();
-        core::fmt::write(&mut buf, format_args!("counter: {}", count)).unwrap();
+        time += 1;
 
-        count += 1;
+        if mode == 0 {
+            if time > 20 {
+                mode = 1;
+                time = 0;
+            }
 
-        display.clear();
-        Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
+            count += 1;
+            display.clear();
+            Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
+                .draw(&mut display)
+                .unwrap();
 
-        Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
+            Text::with_baseline("Hello Rust!", Point::new(0, 16), text_style, Baseline::Top)
+                .draw(&mut display)
+                .unwrap();
 
-        Text::with_baseline(buf.as_str(), Point::new(0, 32), text_style, Baseline::Top)
-            .draw(&mut display)
-            .unwrap();
-        display.flush().unwrap();
+            let mut buf = FmtBuf::new();
+            core::fmt::write(&mut buf, format_args!("counter: {}", count)).unwrap();
 
+            Text::with_baseline(buf.as_str(), Point::new(0, 32), text_style, Baseline::Top)
+                .draw(&mut display)
+                .unwrap();
+            display.flush().unwrap();
 
-        delay.start(500.milliseconds());
-        let _ = nb::block!(delay.wait());
+            delay.start(500.milliseconds());
+            let _ = nb::block!(delay.wait());
+
+        } else {
+            count += 1;
+
+            if time > 100 {
+                mode = 0;
+                time = 0;
+            }
+
+            display.clear();
+            for x in 0..128 {
+                for y in 0..64 {
+                    let sin = pico::hal::rom_data::float_funcs::fsin();
+
+                    let thres = sin(((count % 30) as f32 / 30.0) * 2.0 * core::f32::consts::PI);
+                    let thres_01 = (thres + 1.0) * 0.5;
+
+                    if image[x + y * 128] > (30.0 + thres_01 * 80.0) {
+                        display.set_pixel(x as u32, y as u32, true);
+                    }
+                }
+            }
+            display.flush().unwrap();
+
+            delay.start(16.milliseconds());
+            let _ = nb::block!(delay.wait());
+        }
+    }
+}
+
+fn draw_grayscale_image(out: &mut [f32; 64 * 128]) {
+    let sin = pico::hal::rom_data::float_funcs::fsin();
+    let cos = pico::hal::rom_data::float_funcs::fcos();
+
+    for x in 0..128 {
+        for y in 0..64 {
+            let xf = x as f32;
+            let yf = y as f32;
+
+            let sf = 0.2; // scale factor
+
+            let r = 64.0
+                + 63.0
+                    * sin(xf / (sf * (37.0 + 15.0 * cos(yf / (sf * 74.0)))))
+                    * cos(yf / (sf * (31.0 + 11.0 * sin(xf / (sf * 57.0)))));
+
+            out[x + y * 128] = r;
+        }
     }
 }
