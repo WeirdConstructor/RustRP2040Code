@@ -246,6 +246,7 @@ mod app {
     )]
     fn timer_irq(mut c: timer_irq::Context) {
         let clr : RGB8 = (255, 0, 255).into();
+        info!("Sched!");
 
         c.shared.ws.lock(|ws|
             ws.write([clr].iter().copied()).unwrap());
