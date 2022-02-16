@@ -34,6 +34,7 @@ A broad overview of the rp2040 Rust ecosystem:
 - [heapless - statically allocated data structures](https://docs.rs/heapless/0.7.8/heapless/)
 - [Cortex-M allocator](https://crates.io/crates/alloc-cortex-m)
 Use with care, and "it's probably safer to reserve heap space with linker scripts!"
+- rp2040 Rust Project Template with RTIC and USB serial console: https://github.com/joaocarvalhoopen/Raspberry_Pi_Pico_in_Rust__Proj_Template_with_RTIC_USB-Serial_UF2
 
 **See also a another big link list about Embedded Rust here:** https://github.com/rust-embedded/awesome-embedded-rust
 
