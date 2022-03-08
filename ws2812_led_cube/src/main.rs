@@ -27,7 +27,7 @@ use ws2812_pio::Ws2812;
 #[used]
 pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
-const LEN : usize = 302;
+const LEN : usize = 27;
 
 struct MovingAvg {
     buf:    [u16; 30],
@@ -123,16 +123,12 @@ fn main() -> ! {
 
     let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
     let mut ws = Ws2812::new(
-        pins.gpio16.into_mode(),
+        pins.gpio3.into_mode(),
         &mut pio,
         sm0,
         clocks.peripheral_clock.freq(),
         timer.count_down(),
     );
-
-    let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
-    let mut adc_pin_0 = pins.gpio26.into_floating_input();
-
 
     let mut n: u8 = 0;
     let mut leds_off : [RGB8; LEN] = [(0,0,0).into(); LEN];
@@ -151,7 +147,7 @@ fn main() -> ! {
         (0, 0, 255).into(),
     ];
 
-    let amperes = 8.0;
+    let amperes = 5.0;
     let all_on_amp = (LEN as f32 * 3.0 * 60.0) / 1000.0;
 
     let vbrightness = ((amperes / all_on_amp) * 255.0) as u8;
@@ -169,11 +165,12 @@ fn main() -> ! {
 
     loop {
         cnt += 1;
-        if cnt > 400 {
-            cnt = 0;
-        }
+//        if cnt > 400 {
+//            cnt = 0;
+//        }
 
-        let clr = hsv2rgb_u8((cnt as f32 / 400.0) * 360.0, 0.0, 1.0);
+//        let clr = hsv2rgb_u8((cnt % 360) as f32, 1.0, 1.0);
+        let clr = hsv2rgb_u8(175.0, 1.0, 1.0);
 //        info!("[{}] clr : {}", cnt, clr);
         for i in 0..LEN {
             leds[i] = clr.into();

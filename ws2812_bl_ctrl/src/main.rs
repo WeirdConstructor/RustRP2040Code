@@ -189,11 +189,19 @@ pub fn get_color(code: &[u8]) -> Result<((f32, f32, f32), usize), ()> {
 }
 
 pub fn rd_val(code: &[u8], led_idx: u16, r: u32) -> Result<(u32, usize), ()> {
+    if code.len() == 0 {
+        return Err(());
+    }
+
     let res =
         match code[0] {
             b'r' => (r, 1),
             b'l' => (led_idx as u32, 1),
-            b'_' => (hex2u16(&code[1..])? as u32, 5),
+            b'_' => if code.len() > 0 {
+                (hex2u16(&code[1..])? as u32, 5)
+            } else {
+                return Err(());
+            },
             _    => (hex2u8(&code[0..])? as u32, 2),
         };
     Ok(res)
@@ -245,7 +253,7 @@ pub fn exec_wledcode(dt: f32, code: &[u8], strip: &mut [RGB8]) -> Result<(), ()>
             let op = code[pc];
             pc += 1;
 
-            info!("[{}] {}", led_idx, core::char::from_u32(op as u32).unwrap());
+            //d// info!("[{}] {}", led_idx, core::char::from_u32(op as u32).unwrap());
             match op {
                 b'%' => {
                     let (a, len) = rd_val(&code[pc..], led_idx, r)?;
@@ -402,18 +410,34 @@ fn main() -> ! {
     let mut code_accum : [u8; 1024] = [0u8; 1024];
     let mut wcode_ptr = 0;
     let mut wcode_len = 0;
+
+    let mut ping_cnt = 0;
     loop {
+        ping_cnt += 1;
+        if ping_cnt > 100 {
+            uart.write_full_blocking("ping\n".as_bytes());
+            info!("Sent ping");
+            ping_cnt = 0;
+        }
+
         if uart.uart_is_readable() {
             let mut buf = [0u8; 100];
             if let Ok(len) = uart.read_raw(&mut buf) {
-                let s = core::str::from_utf8(&buf[0..len]).unwrap();
-                info!("Recv({}): [{}]", len, s);
+                if let Ok(s) = core::str::from_utf8(&buf[0..len]) {
+                    info!("Recv({}): [{}]", len, s);
+                }
 
                 for b in buf[0..len].iter() {
                     match *b {
                         b'#' => { wcode_len = 0; wcode_ptr = 0; },
                         b'!' => { wcode_len = wcode_ptr; },
-                        _ => { code_accum[wcode_ptr] = *b; wcode_ptr += 1; }
+                        _    => { code_accum[wcode_ptr] = *b; wcode_ptr += 1; }
+                    }
+
+                    if wcode_ptr >= code_accum.len() {
+                        error!("INPUT OVERFLOW!");
+                        wcode_ptr = 0;
+                        wcode_len = 0;
                     }
                 }
 
@@ -431,7 +455,7 @@ fn main() -> ! {
         //d// info!("Bright={}", vbrightness);
 
         ws.write(brightness(leds.iter().copied(), vbrightness)).unwrap();
-        delay.start((2 * 16).milliseconds());
+        delay.start((5).milliseconds());
         let _ = nb::block!(delay.wait());
     }
 }
