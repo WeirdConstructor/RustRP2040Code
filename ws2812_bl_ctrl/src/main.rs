@@ -414,7 +414,7 @@ fn main() -> ! {
     let mut ping_cnt = 0;
     loop {
         ping_cnt += 1;
-        if ping_cnt > 100 {
+        if ping_cnt > 500 {
             uart.write_full_blocking("ping\n".as_bytes());
             info!("Sent ping");
             ping_cnt = 0;
@@ -447,8 +447,10 @@ fn main() -> ! {
             }
         }
 
-        if let Err(_) = exec_wledcode(0.0, &code_accum[0..wcode_len], &mut leds[..]) {
-            info!("err!");
+        if wcode_len > 0 {
+            if let Err(_) = exec_wledcode(0.0, &code_accum[0..wcode_len], &mut leds[..]) {
+                info!("err!");
+            }
         }
 
         let vbrightness = limit_to_milliamp(&leds[0..real_len], max_ma);
