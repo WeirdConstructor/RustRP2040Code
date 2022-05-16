@@ -23,9 +23,9 @@ use rp_pico::hal::pio::PIOExt;
 use smart_leds::{brightness, SmartLedsWrite, RGB8};
 use ws2812_pio::Ws2812;
 
-#[link_section = ".boot2"]
-#[used]
-pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
+//#[link_section = ".boot2"]
+//#[used]
+//pub static BOOT2: [u8; 256] = rp2040_boot2::BOOT_LOADER_W25Q080;
 
 const LEN : usize = 100;
 
@@ -212,6 +212,8 @@ pub fn rd_val(code: &[u8], led_idx: u16, r: u32) -> Result<(u32, usize), ()> {
 //                               ; /l06 %r02 +r01 !
 pub fn exec_wledcode(dt: f32, code: &[u8], strip: &mut [RGB8]) -> Result<(), ()> {
     let mut regs : [(f32, f32, f32); 256] = [(0.0, 0.0, 0.0); 256];
+    let mut stack : [u32; 256] = [0; 256];
+    let mut stack_ptr = 0;
     let mut rp = 0;
 
     let mut pc : usize = 0;
@@ -283,12 +285,21 @@ pub fn exec_wledcode(dt: f32, code: &[u8], strip: &mut [RGB8]) -> Result<(), ()>
                     pc += len;
                     r = a / b;
                 },
+                b'^' => {
+                    stack[stack_ptr] = r;
+                    if stack_ptr < 255 { stack_ptr += 1 }
+                },
+                b'.' => {
+                    r = stack[stack_ptr];
+                    if stack_ptr > 0 { stack_ptr -= 1; }
+                },
                 b'r' => {
                     let (new_r, len) = rd_val(&code[pc..], led_idx, r)?;
                     r = new_r;
                     pc += len;
                 },
-                _ => { },
+                _ => {
+                },
             }
         }
 
