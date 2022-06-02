@@ -7,6 +7,7 @@ use defmt_rtt as _;
 use embedded_time::duration::*;
 use embedded_hal::timer::CountDown;
 use panic_probe as _;
+use embedded_hal::digital::v2::OutputPin;
 
 use embedded_hal::adc::OneShot;
 use rp_pico::hal::{
@@ -309,6 +310,28 @@ pub fn exec_wledcode(dt: f32, code: &[u8], strip: &mut [RGB8]) -> Result<(), ()>
     Ok(())
 }
 
+use crate::pac::UART0;
+
+//fn setup_hc05<P>(
+//    uart: &mut rp_pico::hal::uart::UartPeripheral<
+//        rp_pico::hal::uart::Enabled, UART0, P>)
+//{
+//    info!("SEND AT");
+//    uart.write_full_blocking("AT\r\n".as_bytes());
+//    info!("SEND AT-NAME?");
+//    uart.write_full_blocking("AT-NAME?\r\n".as_bytes());
+//
+//    if uart.uart_is_readable() {
+//        let mut buf = [0u8; 100];
+//
+//        if let Ok(len) = uart.read_raw(&mut buf) {
+//            if let Ok(s) = core::str::from_utf8(&buf[0..len]) {
+//                info!("Recv({}): [{}]", len, s);
+//            }
+//        }
+//    }
+//}
+//
 #[entry]
 fn main() -> ! {
     info!("Program start");
@@ -357,12 +380,59 @@ fn main() -> ! {
         pins.gpio17.into_mode::<rp_pico::hal::gpio::FunctionUart>(),
     );
 
-    let mut uart = rp_pico::hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
-        .enable(
-            rp_pico::hal::uart::common_configs::_9600_8_N_1,
-            clocks.peripheral_clock.into(),
-        )
-        .unwrap();
+    let mut led = pins.led.into_push_pull_output();
+    led.set_low().unwrap();
+
+    let mut uart = rp_pico::hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS);
+
+    let clock = clocks.peripheral_clock.into();
+
+    let mut uart = {
+        info!("TEST 1");
+        let mut uart = uart.enable(
+            rp_pico::hal::uart::common_configs::_38400_8_N_1,
+            clock
+        ).unwrap();
+
+        uart.write_full_blocking("AT\r\n".as_bytes());
+        delay.start((1000).milliseconds());
+        let _ = nb::block!(delay.wait());
+//        info!("SEND AT+NAME?");
+//        uart.write_full_blocking("AT+NAME?\r\n".as_bytes());
+        uart.write_full_blocking("AT+NAME=WRPVM\r\n".as_bytes());
+        delay.start((1000).milliseconds());
+        let _ = nb::block!(delay.wait());
+
+//        uart.write_full_blocking("AT+UART?\r\n".as_bytes());
+//        delay.start((1000).milliseconds());
+//        let _ = nb::block!(delay.wait());
+//        uart.write_full_blocking("AT-NAME?\r\n".as_bytes());
+//        uart.write_full_blocking("AT-NAME=WRPVM\r\n".as_bytes());
+
+        loop {
+            if uart.uart_is_readable() {
+                let mut buf = [0u8; 100];
+
+                if let Ok(len) = uart.read_raw(&mut buf) {
+                    info!("LEN: {}", len);
+
+                    if let Ok(s) = core::str::from_utf8(&buf[0..len]) {
+                        info!("Recv({}): [{}]", len, s);
+                    }
+                }
+            }
+
+            delay.start((5).milliseconds());
+            let _ = nb::block!(delay.wait());
+        }
+//        setup_hc05(&mut uart);
+        uart.disable()
+    };
+
+    let mut uart = uart.enable(
+        rp_pico::hal::uart::common_configs::_9600_8_N_1,
+        clock
+    ).unwrap();
 
 //    let mut adc = Adc::new(pac.ADC, &mut pac.RESETS);
 //    let mut adc_pin_0 = pins.gpio26.into_floating_input();
@@ -423,12 +493,17 @@ fn main() -> ! {
     let mut wcode_len = 0;
 
     let mut ping_cnt = 0;
+    let mut led_state = true;
+
     loop {
         ping_cnt += 1;
         if ping_cnt > 500 {
             uart.write_full_blocking("ping\n".as_bytes());
             info!("Sent ping");
             ping_cnt = 0;
+            if led_state { led.set_high().unwrap(); }
+            else         { led.set_low().unwrap(); }
+            led_state = !led_state;
         }
 
         if uart.uart_is_readable() {
