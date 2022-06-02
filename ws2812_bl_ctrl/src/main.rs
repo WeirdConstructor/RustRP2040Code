@@ -388,27 +388,22 @@ fn main() -> ! {
     let clock = clocks.peripheral_clock.into();
 
     let mut uart = {
-        info!("TEST 1");
+        info!("Setting HC-05 Name to WRPVM...");
+        led.set_high().unwrap();
+
         let mut uart = uart.enable(
             rp_pico::hal::uart::common_configs::_38400_8_N_1,
             clock
         ).unwrap();
 
         uart.write_full_blocking("AT\r\n".as_bytes());
-        delay.start((1000).milliseconds());
+        delay.start((500).milliseconds());
         let _ = nb::block!(delay.wait());
-//        info!("SEND AT+NAME?");
-//        uart.write_full_blocking("AT+NAME?\r\n".as_bytes());
         uart.write_full_blocking("AT+NAME=WRPVM\r\n".as_bytes());
-        delay.start((1000).milliseconds());
+        delay.start((500).milliseconds());
         let _ = nb::block!(delay.wait());
 
-//        uart.write_full_blocking("AT+UART?\r\n".as_bytes());
-//        delay.start((1000).milliseconds());
-//        let _ = nb::block!(delay.wait());
-//        uart.write_full_blocking("AT-NAME?\r\n".as_bytes());
-//        uart.write_full_blocking("AT-NAME=WRPVM\r\n".as_bytes());
-
+        let mut count = 0;
         loop {
             if uart.uart_is_readable() {
                 let mut buf = [0u8; 100];
@@ -424,10 +419,17 @@ fn main() -> ! {
 
             delay.start((5).milliseconds());
             let _ = nb::block!(delay.wait());
+
+            count += 1;
+            if count > 300 {
+                break;
+            }
         }
-//        setup_hc05(&mut uart);
+
         uart.disable()
     };
+    info!("Continue with LED ctrl...");
+    led.set_low().unwrap();
 
     let mut uart = uart.enable(
         rp_pico::hal::uart::common_configs::_9600_8_N_1,
@@ -488,7 +490,7 @@ fn main() -> ! {
     let mut leds : [RGB8; LEN] = [(0,0,0).into(); LEN];
 
     let real_len = 9;
-    let mut code_accum : [u8; 1024] = [0u8; 1024];
+    let mut code_accum : [u8; 2048] = [0u8; 2048];
     let mut wcode_ptr = 0;
     let mut wcode_len = 0;
 
@@ -496,16 +498,6 @@ fn main() -> ! {
     let mut led_state = true;
 
     loop {
-        ping_cnt += 1;
-        if ping_cnt > 500 {
-            uart.write_full_blocking("ping\n".as_bytes());
-            info!("Sent ping");
-            ping_cnt = 0;
-            if led_state { led.set_high().unwrap(); }
-            else         { led.set_low().unwrap(); }
-            led_state = !led_state;
-        }
-
         if uart.uart_is_readable() {
             let mut buf = [0u8; 100];
             if let Ok(len) = uart.read_raw(&mut buf) {
@@ -531,6 +523,16 @@ fn main() -> ! {
                     continue;
                 }
             }
+        }
+
+        ping_cnt += 1;
+        if ping_cnt > 500 {
+            uart.write_full_blocking("ping\n".as_bytes());
+            info!("Sent ping");
+            ping_cnt = 0;
+            if led_state { led.set_high().unwrap(); }
+            else         { led.set_low().unwrap(); }
+            led_state = !led_state;
         }
 
         if wcode_len > 0 {
